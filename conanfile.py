@@ -6,8 +6,8 @@ import os
 
 class LibnameConan(ConanFile):
     name = "vcl"
-    version = "20190502"
-    commit_id = "7b73e9914fc15165bbc3d61e70fc0de804e440a7"
+    version = "20190515"
+    commit_id = "0f20b65aad7ac5b667c18a0d80489cbaa5508f06"
     description = "Visual Computing Library (VCL)"
     topics = ("Visual Computing")
     url = "https://github.com/bfierz/vcl"
@@ -53,7 +53,9 @@ class LibnameConan(ConanFile):
 
     def source(self):
         
-        self.run("git clone --recursive " + self.url + ".git " + self._source_subfolder)
+        self.run("git clone " + self.url + ".git " + self._source_subfolder)
+        self.run("git checkout " + self.commit_id, cwd=self._source_subfolder)
+        self.run("git submodule update --init --recursive", cwd=self._source_subfolder)
         shutil.rmtree(self._source_subfolder + "/src/externals/json/test")
 
         #source_url = "https://github.com/bfierz/vcl"
@@ -70,10 +72,8 @@ class LibnameConan(ConanFile):
         cmake.definitions["VCL_BUILD_TOOLS"] = False
         cmake.definitions["VCL_BUILD_EXAMPLES"] = False
         # Support multi-package configuration
-        #if not hasattr(self.settings, "build_type"):
-        #    cmake.definitions["CMAKE_DEBUG_POSTFIX"] = "_d"
-        # Required for compatibility atm
-        cmake.definitions["CMAKE_DEBUG_POSTFIX"] = "_d"
+        if not hasattr(self.settings, "build_type"):
+            cmake.definitions["CMAKE_DEBUG_POSTFIX"] = "_d"
         # Configure features
         cmake.definitions["VCL_VECTORIZE"] = str(self.options.vectorization)
         cmake.definitions["VCL_OPENGL_SUPPORT"] = True
@@ -114,31 +114,28 @@ class LibnameConan(ConanFile):
             cmake.build(target="vcl_graphics")
             cmake.build(target="vcl_math")
 
+        cmake.install()
     def package(self):
-        self.copy(pattern="LICENSE", dst="licenses", src=self._source_subfolder)
-        
+
         bin_folder = os.path.join(self._build_subfolder, "bin")
         lib_folder = os.path.join(self._build_subfolder, "lib")
-        inc_folder = os.path.join(self._source_subfolder, "src/libs")
+        inc_folder = os.path.join(self._source_subfolder, "include")
+        
+        self.copy(pattern="LICENSE", dst="licenses", src=self._source_subfolder)
         self.copy("*.dll", dst="bin", src=bin_folder)
         self.copy("*.a", dst="lib", src=lib_folder)
         self.copy("*.lib", dst="lib", src=lib_folder)
         self.copy("*.h", dst="include", src=inc_folder)
         self.copy("*.inl", dst="include", src=inc_folder)
-        self.copy("config.h", dst="include/vcl.core/vcl/config", src=os.path.join(self._build_subfolder, self._source_subfolder, "src/libs/vcl.core/vcl/config"))
 
     def package_info(self):
-        self.cpp_info.includedirs = ['include/vcl.core', 'include/vcl.math', 'include/vcl.graphics', 'include/vcl.geometry']
+        self.cpp_info.includedirs = ['include/vcl_core', 'include/vcl_math', 'include/vcl_graphics', 'include/vcl_geometry']
         if self.settings.os == "Windows":
             if not hasattr(self.settings, "build_type"):
                 self.cpp_info.debug.libs = ['vcl_core_d.lib', 'vcl_math_d.lib', 'vcl_geometry_d.lib', 'vcl_graphics_d.lib']
                 self.cpp_info.release.libs = ['vcl_core.lib', 'vcl_math.lib', 'vcl_geometry.lib', 'vcl_graphics.lib']
             else:
-                # Required for compatibility atm
-                if self.settings.build_type == 'Debug':
-                    self.cpp_info.libs = ['vcl_core_d.lib', 'vcl_math_d.lib', 'vcl_geometry_d.lib', 'vcl_graphics_d.lib']
-                else:
-                    self.cpp_info.libs = ['vcl_core.lib', 'vcl_math.lib', 'vcl_geometry.lib', 'vcl_graphics.lib']
+                self.cpp_info.libs = ['vcl_core.lib', 'vcl_math.lib', 'vcl_geometry.lib', 'vcl_graphics.lib']
         else:
             self.cpp_info.libs = ['libvcl_core.a', 'libvcl_math.a', 'libvcl_geometry.a', 'libvcl_graphics.a']
         self.cpp_info.libdirs = [ "lib" ]
