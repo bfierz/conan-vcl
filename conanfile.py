@@ -129,6 +129,7 @@ class LibnameConan(ConanFile):
         self.copy("*.inl", dst="include", src=inc_folder)
 
     def package_info(self):
+        self.cpp_info.defines = ['VCL_OPENGL_SUPPORT']
         self.cpp_info.includedirs = ['include/vcl_core', 'include/vcl_math', 'include/vcl_graphics', 'include/vcl_geometry']
         if self.settings.os == "Windows":
             if not hasattr(self.settings, "build_type"):
